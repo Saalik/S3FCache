@@ -1,7 +1,4 @@
-/**
- * @author Saalik Hatia
- * @version 0.1
- **/
+
 
 package s3fcache;
 
@@ -14,10 +11,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  * The main class for the S3FCache, implementing a cache system
  * with a three-queue eviction strategy based on the S3-FIFO algorithm.
  * This implementation is thread-safe.
- * @param <K> the type of keys used by this cache.
- * @param <V> the type of values stored in the cache.
+ * @author Saalik Hatia
+ * @version 0.1
+ * @since 0.1
  */
-public class S3FCache<K, V> {
+
+
+public class S3FCache<K, V> implements Cache<K, V> {
     private final static int DEFAULTSIZE = 10;
     private int maxWeight = 3;
     private final Deque<K> ghostQueue;
@@ -51,6 +51,13 @@ public class S3FCache<K, V> {
         this.cacheMap = new ConcurrentHashMap<>();
     }
 
+    /**
+     * Constructs an S3FCache with default sizes for each queue.
+     * Initializes three concurrent queues to manage cache entries
+     * in a thread-safe manner.
+     * Default max weigth is 3.
+     * Default size is 10.
+     */
     public S3FCache() {
         this(DEFAULTSIZE);
     }
@@ -66,6 +73,7 @@ public class S3FCache<K, V> {
      * @return the value associated with the key, or null if not found.
      * @throws NullPointerException if the key is null.
      */
+    @Override
     public V get(K key) {
         // Assert that key is not null
         Objects.requireNonNull(key, "Key cannot be null");
@@ -105,7 +113,9 @@ public class S3FCache<K, V> {
      * Objects that have been accessed at least once are reinserted with one bit set to 0 (similar to decreasing frequency by 1).
      * @param key the key to be associated with the value.
      * @param value the value to be stored in the cache.
+     * @throws NullPointerException if the key or value is null.
      */
+    @Override
     public void put(K key, V value) {
         // Assert that key and value are not null
         Objects.requireNonNull(key, "Key cannot be null");
@@ -155,6 +165,7 @@ public class S3FCache<K, V> {
      * If the small queue is empty, the entry with the lowest weight is evicted from the big queue.
      * The entry is moved to the ghost queue.
      */
+    @Override
     public void evict() {
         // Check if the small queue is not empty
         if (!smallQueue.isEmpty()) {
@@ -192,6 +203,7 @@ public class S3FCache<K, V> {
      * Returns a view of the cache as a concurrent map.
      * @return a concurrent map view of the cache.
      */
+    @Override
     public ConcurrentMap<K, CacheEntry<K, V>> asMap() {
         return cacheMap;
     }
@@ -219,6 +231,7 @@ public class S3FCache<K, V> {
     /**
      * Invalidates all cache entries.
      */
+    @Override
     public void invalidateAll() {
         cacheMap.clear();
         ghostQueue.clear();
@@ -231,6 +244,7 @@ public class S3FCache<K, V> {
      * Invalidates the cache entries for the specified keys.
      * @param keys the keys to be invalidated.
      */
+    @Override
     public void invalidateAll(Iterable<K> keys) {
         for (K key : keys) {
             invalidate(key);
@@ -241,7 +255,8 @@ public class S3FCache<K, V> {
      * Copies all the mappings from the specified map to the cache.
      * @param map the map containing the mappings to be copied to the cache.
      */
-    public void putAll(Map<? extends K,? extends V> map) {
+    @Override
+    public void putAll(Map<? extends K, ? extends V> map) {
         for (Map.Entry<? extends K, ? extends V> entry : map.entrySet()) {
             put(entry.getKey(), entry.getValue());
         }
@@ -251,6 +266,7 @@ public class S3FCache<K, V> {
      * Returns the number of entries in the cache.
      * @return the number of entries in the cache.
      */
+    @Override
     public long size() {
         return cacheMap.size();
     }
@@ -267,6 +283,7 @@ public class S3FCache<K, V> {
      * Does not contain the keys in the ghost queue.
      * @return the set of keys in the cache.
      */
+    @Override
     public Set<K> getKeys() {
         return cacheMap.keySet();
     }
@@ -275,12 +292,14 @@ public class S3FCache<K, V> {
      * Returns the set of keys in the ghost queue.
      * @return the set of keys in the ghost queue.
      */
+    @Override
     public HashSet<K> getGhostKeySet() {
         return ghostKeySet;
     }
 
     /**
      * Set new max weight for the cache.
+     * @param maxWeight the new max weight.
      * @return old max weight.
      */
     public int setMaxWeight(int maxWeight) {
